@@ -4,6 +4,7 @@ import com.example.fintech.user.dto.CreateUserRequest;
 import com.example.fintech.user.dto.CreateUserResponse;
 import com.example.fintech.user.entity.User;
 import com.example.fintech.user.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,7 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CreateUserResponse createUser(@RequestBody CreateUserRequest request) {
+    public CreateUserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
         User user = userService.createUser(request);
 
         return new CreateUserResponse(
