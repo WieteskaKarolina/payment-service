@@ -2,6 +2,8 @@ package com.example.fintech.user.service;
 
 import com.example.fintech.user.dto.CreateUserRequest;
 import com.example.fintech.user.entity.User;
+import com.example.fintech.user.exception.UserAlreadyExistsException;
+import com.example.fintech.user.exception.UserNotFoundException;
 import com.example.fintech.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,13 +22,14 @@ public class UserService {
     }
 
     public User getById(UUID id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
     public User createUser(CreateUserRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new IllegalArgumentException("User with this email already exists");
+            throw new UserAlreadyExistsException(
+                    "User with this email already exists"
+            );
         }
 
         String passwordHash = passwordEncoder.encode(request.password());

@@ -2,6 +2,8 @@ package com.example.fintech.user.service;
 
 import com.example.fintech.user.dto.CreateUserRequest;
 import com.example.fintech.user.entity.User;
+import com.example.fintech.user.exception.UserAlreadyExistsException;
+import com.example.fintech.user.exception.UserNotFoundException;
 import com.example.fintech.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +60,7 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                UserNotFoundException.class,
                 () -> userService.getById(userId)
         );
     }
@@ -116,7 +118,7 @@ class UserServiceTest {
                 .thenReturn(Optional.of(existingUser));
 
         assertThrows(
-                IllegalArgumentException.class,
+                UserAlreadyExistsException.class,
                 () -> userService.createUser(request)
         );
 
