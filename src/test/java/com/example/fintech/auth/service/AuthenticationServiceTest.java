@@ -1,6 +1,8 @@
 package com.example.fintech.auth.service;
 
 import com.example.fintech.auth.dto.LoginRequest;
+import com.example.fintech.auth.dto.LoginResponse;
+import com.example.fintech.security.jwt.JwtService;
 import com.example.fintech.user.entity.User;
 import com.example.fintech.user.exception.UserNotFoundException;
 import com.example.fintech.user.repository.UserRepository;
@@ -25,6 +27,9 @@ class AuthenticationServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtService jwtService;
 
     @InjectMocks
     private AuthenticationService authenticationService;
@@ -54,9 +59,13 @@ class AuthenticationServiceTest {
                 user.getPasswordHash()
         )).thenReturn(true);
 
-        User result = authenticationService.authenticate(request);
+        when(jwtService.generateToken(user))
+                .thenReturn("test-jwt-token");
 
-        assertEquals(user, result);
+        LoginResponse result = authenticationService.authenticate(request);
+
+        assertEquals("test-jwt-token", result.accessToken());
+        assertEquals("Bearer", result.tokenType());
 
         verify(userRepository).findByEmail(request.email());
 
@@ -64,6 +73,8 @@ class AuthenticationServiceTest {
                 request.password(),
                 user.getPasswordHash()
         );
+
+        verify(jwtService).generateToken(user);
     }
 
 

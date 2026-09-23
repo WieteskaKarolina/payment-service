@@ -1,6 +1,8 @@
 package com.example.fintech.auth.service;
 
 import com.example.fintech.auth.dto.LoginRequest;
+import com.example.fintech.auth.dto.LoginResponse;
+import com.example.fintech.security.jwt.JwtService;
 import com.example.fintech.user.entity.User;
 import com.example.fintech.user.exception.UserNotFoundException;
 import com.example.fintech.user.repository.UserRepository;
@@ -12,16 +14,19 @@ public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public AuthenticationService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
-    public User authenticate(LoginRequest request) {
+    public LoginResponse authenticate(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() ->
                         new UserNotFoundException("Invalid email or password")
@@ -34,6 +39,8 @@ public class AuthenticationService {
             throw new UserNotFoundException("Invalid email or password");
         }
 
-        return user;
+        String token = jwtService.generateToken(user);
+
+        return new LoginResponse(token, "Bearer");
     }
 }
