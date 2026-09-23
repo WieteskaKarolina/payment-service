@@ -1,4 +1,4 @@
-package com.example.fintech.user;
+package com.example.fintech.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
