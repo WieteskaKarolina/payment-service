@@ -1,5 +1,6 @@
 package com.example.fintech.exception;
 
+import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.user.exception.UserAlreadyExistsException;
 import com.example.fintech.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,18 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(
                         HttpStatus.CONFLICT.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(
+                        HttpStatus.UNAUTHORIZED.value(),
                         exception.getMessage()
                 ));
     }

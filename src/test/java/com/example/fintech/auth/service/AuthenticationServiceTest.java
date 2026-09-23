@@ -2,9 +2,9 @@ package com.example.fintech.auth.service;
 
 import com.example.fintech.auth.dto.LoginRequest;
 import com.example.fintech.auth.dto.LoginResponse;
+import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.security.jwt.JwtService;
 import com.example.fintech.user.entity.User;
-import com.example.fintech.user.exception.UserNotFoundException;
 import com.example.fintech.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -89,8 +89,8 @@ class AuthenticationServiceTest {
         when(userRepository.findByEmail(request.email()))
                 .thenReturn(Optional.empty());
 
-        UserNotFoundException exception = assertThrows(
-                UserNotFoundException.class,
+        InvalidCredentialsException exception = assertThrows(
+                InvalidCredentialsException.class,
                 () -> authenticationService.authenticate(request)
         );
 
@@ -102,6 +102,7 @@ class AuthenticationServiceTest {
         verify(userRepository).findByEmail(request.email());
 
         verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(jwtService);
     }
 
 
@@ -129,8 +130,8 @@ class AuthenticationServiceTest {
                 user.getPasswordHash()
         )).thenReturn(false);
 
-        UserNotFoundException exception = assertThrows(
-                UserNotFoundException.class,
+        InvalidCredentialsException exception = assertThrows(
+                InvalidCredentialsException.class,
                 () -> authenticationService.authenticate(request)
         );
 
@@ -145,5 +146,7 @@ class AuthenticationServiceTest {
                 request.password(),
                 user.getPasswordHash()
         );
+
+        verifyNoInteractions(jwtService);
     }
 }
