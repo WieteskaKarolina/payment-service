@@ -91,4 +91,31 @@ class UserRepositoryIntegrationTest {
 
         assertTrue(result.isEmpty());
     }
+
+    @Test
+    void shouldFindUserByEmail() {
+        User user = new User(
+                "find@example.com",
+                "hashed-password",
+                "Karolina",
+                "Wieteska",
+                "USER"
+        );
+
+        userRepository.save(user);
+
+        Optional<User> result =
+                userRepository.findByEmail("find@example.com");
+
+        assertTrue(result.isPresent());
+        assertEquals("find@example.com", result.get().getEmail());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenEmailDoesNotExist() {
+        Optional<User> result =
+                userRepository.findByEmail("missing@example.com");
+
+        assertTrue(result.isEmpty());
+    }
 }
