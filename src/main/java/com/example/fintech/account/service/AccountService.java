@@ -6,6 +6,7 @@ import com.example.fintech.account.repository.AccountRepository;
 import com.example.fintech.user.entity.User;
 import com.example.fintech.user.service.UserService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,6 +30,26 @@ public class AccountService {
         return accountRepository.findById(id)
                 .orElseThrow(() ->
                         new AccountNotFoundException("Account not found"));
+    }
+
+    @Transactional
+    public Account getByIdForUpdate(UUID id) {
+        return accountRepository.findByIdForUpdate(id)
+                .orElseThrow(() ->
+                        new AccountNotFoundException("Account not found"));
+    }
+
+    @Transactional
+    public Account getByUserIdAndCurrencyForUpdate(
+            UUID userId,
+            String currency
+    ) {
+        return accountRepository
+                .findByUserIdAndCurrencyForUpdate(userId, currency)
+                .orElseThrow(() ->
+                        new AccountNotFoundException(
+                                "Source account not found"
+                        ));
     }
 
     public List<Account> getAccountsForUser(UUID userId) {
