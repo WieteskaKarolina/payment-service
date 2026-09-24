@@ -1,8 +1,6 @@
 package com.example.fintech.account.controller;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +12,8 @@ import java.util.UUID;
 
 import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.service.AccountService;
+import com.example.fintech.exception.GlobalExceptionHandler;
+import com.example.fintech.user.exception.UserNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +45,7 @@ class AccountControllerTest {
                 .setCustomArgumentResolvers(
                         new AuthenticationPrincipalArgumentResolver()
                 )
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
@@ -171,6 +172,73 @@ class AccountControllerTest {
 
             verify(accountService)
                     .getAccountsForUser(userId);
+
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void shouldRejectInvalidCurrency() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userId.toString(),
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
+        try {
+            mockMvc.perform(
+                            post("/api/accounts")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                {
+                                    "currency": "PL"
+                                }
+                                """)
+                    )
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(accountService);
+
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUserDoesNotExist() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        when(accountService.createAccount(userId, "PLN"))
+                .thenThrow(new UserNotFoundException("User not found"));
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userId.toString(),
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
+        try {
+            mockMvc.perform(
+                            post("/api/accounts")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                {
+                                    "currency": "PLN"
+                                }
+                                """)
+                    )
+                    .andExpect(status().isNotFound());
 
         } finally {
             SecurityContextHolder.clearContext();
