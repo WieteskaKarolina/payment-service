@@ -3,6 +3,7 @@ package com.example.fintech.account.controller;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -88,6 +89,88 @@ class AccountControllerTest {
 
             verify(accountService)
                     .createAccount(userId, "PLN");
+
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void shouldGetAccountsForUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID firstAccountId = UUID.randomUUID();
+        UUID secondAccountId = UUID.randomUUID();
+
+        Account plnAccount = mock(Account.class);
+        when(plnAccount.getId()).thenReturn(firstAccountId);
+        when(plnAccount.getCurrency()).thenReturn("PLN");
+        when(plnAccount.getBalance()).thenReturn(new BigDecimal("1500.00"));
+
+        Account eurAccount = mock(Account.class);
+        when(eurAccount.getId()).thenReturn(secondAccountId);
+        when(eurAccount.getCurrency()).thenReturn("EUR");
+        when(eurAccount.getBalance()).thenReturn(new BigDecimal("500.00"));
+
+        when(accountService.getAccountsForUser(userId))
+                .thenReturn(List.of(plnAccount, eurAccount));
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userId.toString(),
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
+        try {
+            mockMvc.perform(
+                            get("/api/accounts")
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].id").value(firstAccountId.toString()))
+                    .andExpect(jsonPath("$[0].currency").value("PLN"))
+                    .andExpect(jsonPath("$[0].balance").value(1500.00))
+                    .andExpect(jsonPath("$[1].id").value(secondAccountId.toString()))
+                    .andExpect(jsonPath("$[1].currency").value("EUR"))
+                    .andExpect(jsonPath("$[1].balance").value(500.00));
+
+            verify(accountService)
+                    .getAccountsForUser(userId);
+
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenUserHasNoAccounts() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        when(accountService.getAccountsForUser(userId))
+                .thenReturn(List.of());
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userId.toString(),
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
+        try {
+            mockMvc.perform(
+                            get("/api/accounts")
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
+
+            verify(accountService)
+                    .getAccountsForUser(userId);
 
         } finally {
             SecurityContextHolder.clearContext();

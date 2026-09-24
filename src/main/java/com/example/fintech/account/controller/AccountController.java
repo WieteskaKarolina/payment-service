@@ -6,10 +6,10 @@ import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.service.AccountService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -38,5 +38,19 @@ public class AccountController {
                 account.getCurrency(),
                 account.getBalance()
         );
+    }
+
+    @GetMapping
+    public List<AccountResponse> getAccounts(
+            @AuthenticationPrincipal String userId
+    ) {
+        return accountService.getAccountsForUser(UUID.fromString(userId))
+                .stream()
+                .map(account -> new AccountResponse(
+                        account.getId(),
+                        account.getCurrency(),
+                        account.getBalance()
+                ))
+                .toList();
     }
 }
