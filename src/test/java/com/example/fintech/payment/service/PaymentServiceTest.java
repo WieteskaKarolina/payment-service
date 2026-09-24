@@ -1,6 +1,7 @@
 package com.example.fintech.payment.service;
 
 import com.example.fintech.account.entity.Account;
+import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.account.service.AccountService;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
@@ -14,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,10 +48,12 @@ class PaymentServiceTest {
         when(destinationAccount.getBalance())
                 .thenReturn(new BigDecimal("500.00"));
 
-        when(accountService.getAccountsForUser(userId))
-                .thenReturn(List.of(sourceAccount));
+        when(accountService.getByUserIdAndCurrencyForUpdate(
+                userId,
+                "PLN"
+        )).thenReturn(sourceAccount);
 
-        when(accountService.getById(destinationAccountId))
+        when(accountService.getByIdForUpdate(destinationAccountId))
                 .thenReturn(destinationAccount);
 
         CreatePaymentRequest request = new CreatePaymentRequest(
@@ -94,10 +96,12 @@ class PaymentServiceTest {
 
         when(destinationAccount.getCurrency()).thenReturn("PLN");
 
-        when(accountService.getAccountsForUser(userId))
-                .thenReturn(List.of(sourceAccount));
+        when(accountService.getByUserIdAndCurrencyForUpdate(
+                userId,
+                "PLN"
+        )).thenReturn(sourceAccount);
 
-        when(accountService.getById(destinationAccountId))
+        when(accountService.getByIdForUpdate(destinationAccountId))
                 .thenReturn(destinationAccount);
 
         CreatePaymentRequest request = new CreatePaymentRequest(
@@ -130,13 +134,14 @@ class PaymentServiceTest {
         Account destinationAccount = mock(Account.class);
 
         when(sourceAccount.getCurrency()).thenReturn("PLN");
-
         when(destinationAccount.getCurrency()).thenReturn("EUR");
 
-        when(accountService.getAccountsForUser(userId))
-                .thenReturn(List.of(sourceAccount));
+        when(accountService.getByUserIdAndCurrencyForUpdate(
+                userId,
+                "PLN"
+        )).thenReturn(sourceAccount);
 
-        when(accountService.getById(destinationAccountId))
+        when(accountService.getByIdForUpdate(destinationAccountId))
                 .thenReturn(destinationAccount);
 
         CreatePaymentRequest request = new CreatePaymentRequest(
@@ -158,5 +163,34 @@ class PaymentServiceTest {
 
         verify(paymentRepository, never())
                 .save(any(Payment.class));
+    }
+
+    @Test
+    void shouldRejectPaymentWhenSourceAccountDoesNotExist() {
+        UUID userId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
+
+        when(accountService.getByUserIdAndCurrencyForUpdate(
+                userId,
+                "PLN"
+        )).thenThrow(
+                new AccountNotFoundException("Source account not found")
+        );
+
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                destinationAccountId,
+                new BigDecimal("100.00"),
+                "PLN"
+        );
+
+        assertThrows(
+                AccountNotFoundException.class,
+                () -> paymentService.createPayment(userId, request)
+        );
+
+        verify(accountService, never())
+                .getByIdForUpdate(destinationAccountId);
+
+        verifyNoInteractions(paymentRepository);
     }
 }

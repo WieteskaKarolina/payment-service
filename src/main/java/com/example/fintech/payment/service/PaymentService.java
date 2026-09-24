@@ -9,7 +9,6 @@ import com.example.fintech.payment.exception.InsufficientBalanceException;
 import com.example.fintech.payment.repository.PaymentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.fintech.account.exception.AccountNotFoundException;
 
 import java.util.UUID;
 
@@ -32,18 +31,16 @@ public class PaymentService {
             UUID userId,
             CreatePaymentRequest request
     ) {
-        Account sourceAccount = accountService
-                .getAccountsForUser(userId)
-                .stream()
-                .filter(account ->
-                        account.getCurrency().equals(request.currency()))
-                .findFirst()
-                .orElseThrow(() ->
-                        new AccountNotFoundException("Source account not found")
+        Account sourceAccount =
+                accountService.getByUserIdAndCurrencyForUpdate(
+                        userId,
+                        request.currency()
                 );
 
-        Account destinationAccount = accountService
-                .getById(request.destinationAccountId());
+        Account destinationAccount =
+                accountService.getByIdForUpdate(
+                        request.destinationAccountId()
+                );
 
         if (!sourceAccount.getCurrency()
                 .equals(destinationAccount.getCurrency())) {
