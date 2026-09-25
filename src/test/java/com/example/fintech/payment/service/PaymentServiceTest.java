@@ -3,6 +3,8 @@ package com.example.fintech.payment.service;
 import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.account.service.AccountService;
+import com.example.fintech.kafka.event.PaymentCreatedEvent;
+import com.example.fintech.kafka.producer.PaymentEventProducer;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
@@ -28,6 +30,9 @@ class PaymentServiceTest {
 
     @Mock
     private AccountService accountService;
+
+    @Mock
+    private PaymentEventProducer paymentEventProducer;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -62,14 +67,12 @@ class PaymentServiceTest {
                 "PLN"
         );
 
-        Payment payment = mock(Payment.class);
-
         when(paymentRepository.save(any(Payment.class)))
-                .thenReturn(payment);
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Payment result = paymentService.createPayment(userId, request);
 
-        assertSame(payment, result);
+        assertNotNull(result);
 
         verify(sourceAccount).setBalance(
                 new BigDecimal("900.00")
@@ -80,6 +83,9 @@ class PaymentServiceTest {
         );
 
         verify(paymentRepository).save(any(Payment.class));
+
+        verify(paymentEventProducer)
+                .publishPaymentCreated(any(PaymentCreatedEvent.class));
     }
 
     @Test
