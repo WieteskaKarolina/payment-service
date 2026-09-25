@@ -6,6 +6,7 @@ import com.example.fintech.kafka.event.PaymentCreatedEvent;
 import com.example.fintech.kafka.producer.PaymentEventProducer;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
+import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
 import com.example.fintech.payment.repository.PaymentRepository;
@@ -61,10 +62,17 @@ public class PaymentService {
             UUID userId,
             CreatePaymentRequest request
     ) {
-        return accountService.getByUserIdAndCurrencyForUpdate(
-                userId,
-                request.currency()
+        Account sourceAccount = accountService.getByIdForUpdate(
+                request.sourceAccountId()
         );
+
+        if (!sourceAccount.getUser().getId().equals(userId)) {
+            throw new AccountAccessDeniedException(
+                    "You do not have access to this account"
+            );
+        }
+
+        return sourceAccount;
     }
 
     private Account getDestinationAccount(CreatePaymentRequest request) {

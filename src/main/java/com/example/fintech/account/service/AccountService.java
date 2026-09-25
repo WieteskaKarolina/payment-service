@@ -52,6 +52,17 @@ public class AccountService {
                         ));
     }
 
+    @Transactional
+    public Account deposit(UUID accountId, BigDecimal amount) {
+        Account account = getByIdForUpdate(accountId);
+
+        account.setBalance(
+                account.getBalance().add(amount)
+        );
+
+        return account;
+    }
+
     public List<Account> getAccountsForUser(UUID userId) {
         return accountRepository.findAllByUserId(userId);
     }

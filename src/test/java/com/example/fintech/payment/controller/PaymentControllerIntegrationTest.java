@@ -113,11 +113,13 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PLN"
                                         }
                                         """.formatted(
+                                        sourceAccount.getId(),
                                         destinationAccount.getId()
                                 ))
                 )
@@ -200,11 +202,13 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                     {
+                                        "sourceAccountId": "%s",
                                         "destinationAccountId": "%s",
                                         "amount": 100.00,
                                         "currency": "PLN"
                                     }
                                     """.formatted(
+                                        sourceAccount.getId(),
                                         destinationAccount.getId()
                                 ))
                 )
@@ -246,11 +250,15 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                     {
+                                        "sourceAccountId": "%s",
                                         "destinationAccountId": "%s",
                                         "amount": 100.00,
                                         "currency": "PLN"
                                     }
-                                    """.formatted(nonExistingAccountId))
+                                    """.formatted(
+                                        sourceAccount.getId(),
+                                        nonExistingAccountId
+                                ))
                 )
                 .andExpect(status().isNotFound());
     }
