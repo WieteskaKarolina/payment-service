@@ -4,12 +4,13 @@ import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.account.service.AccountService;
 import com.example.fintech.kafka.event.PaymentCreatedEvent;
-import com.example.fintech.kafka.producer.PaymentEventProducer;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.outbox.entity.OutboxEvent;
+import com.example.fintech.payment.outbox.repository.OutboxEventRepository;
 import com.example.fintech.payment.repository.PaymentRepository;
 import com.example.fintech.user.entity.User;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -33,11 +35,14 @@ class PaymentServiceTest {
     @Mock
     private AccountService accountService;
 
-    @Mock
-    private PaymentEventProducer paymentEventProducer;
-
     @InjectMocks
     private PaymentService paymentService;
+
+    @Mock
+    private OutboxEventRepository outboxEventRepository;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @Test
     void shouldCreatePaymentAndTransferMoney() {
@@ -76,6 +81,17 @@ class PaymentServiceTest {
         when(paymentRepository.save(any(Payment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
+        when(objectMapper.writeValueAsString(any(PaymentCreatedEvent.class)))
+                .thenReturn("""
+                {
+                    "paymentId": "test",
+                    "sourceAccountId": "source",
+                    "destinationAccountId": "destination",
+                    "amount": 100.00,
+                    "currency": "PLN"
+                }
+                """);
+
         Payment result = paymentService.createPayment(userId, request);
 
         assertNotNull(result);
@@ -89,9 +105,7 @@ class PaymentServiceTest {
         );
 
         verify(paymentRepository).save(any(Payment.class));
-
-        verify(paymentEventProducer)
-                .publishPaymentCreated(any(PaymentCreatedEvent.class));
+        verify(outboxEventRepository).save(any(OutboxEvent.class));
     }
 
     @Test
@@ -127,7 +141,7 @@ class PaymentServiceTest {
                 .getByIdForUpdate(destinationAccountId);
 
         verifyNoInteractions(paymentRepository);
-        verifyNoInteractions(paymentEventProducer);
+        verifyNoInteractions(outboxEventRepository);
     }
 
     @Test
@@ -175,6 +189,8 @@ class PaymentServiceTest {
 
         verify(paymentRepository, never())
                 .save(any(Payment.class));
+        verify(outboxEventRepository, never())
+                .save(any(OutboxEvent.class));
     }
 
     @Test
@@ -219,6 +235,8 @@ class PaymentServiceTest {
 
         verify(paymentRepository, never())
                 .save(any(Payment.class));
+        verify(outboxEventRepository, never())
+                .save(any(OutboxEvent.class));
     }
 
     @Test
@@ -250,6 +268,6 @@ class PaymentServiceTest {
                 .getByIdForUpdate(destinationAccountId);
 
         verifyNoInteractions(paymentRepository);
-        verifyNoInteractions(paymentEventProducer);
+        verifyNoInteractions(outboxEventRepository);
     }
 }
