@@ -4,6 +4,7 @@ import com.example.fintech.user.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestConstructor;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import lombok.RequiredArgsConstructor;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Testcontainers
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @RequiredArgsConstructor

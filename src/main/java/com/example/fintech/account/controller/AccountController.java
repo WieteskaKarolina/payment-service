@@ -2,6 +2,7 @@ package com.example.fintech.account.controller;
 
 import com.example.fintech.account.dto.AccountResponse;
 import com.example.fintech.account.dto.CreateAccountRequest;
+import com.example.fintech.account.dto.DepositRequest;
 import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.service.AccountService;
 import jakarta.validation.Valid;
@@ -52,5 +53,22 @@ public class AccountController {
                         account.getBalance()
                 ))
                 .toList();
+    }
+
+    @PostMapping("/{accountId}/deposit")
+    public AccountResponse deposit(
+            @PathVariable UUID accountId,
+            @Valid @RequestBody DepositRequest request
+    ) {
+        Account account = accountService.deposit(
+                accountId,
+                request.amount()
+        );
+
+        return new AccountResponse(
+                account.getId(),
+                account.getCurrency(),
+                account.getBalance()
+        );
     }
 }

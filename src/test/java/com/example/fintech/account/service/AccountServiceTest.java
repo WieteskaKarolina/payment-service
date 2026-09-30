@@ -118,4 +118,31 @@ class AccountServiceTest {
         verify(userService).getById(userId);
         verify(accountRepository).save(any(Account.class));
     }
+
+    @Test
+    void shouldDepositMoneyIntoAccount() {
+        UUID accountId = UUID.randomUUID();
+
+        Account account = new Account(
+                null,
+                "PLN",
+                new BigDecimal("100.00")
+        );
+
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(account));
+
+        Account result = accountService.deposit(
+                accountId,
+                new BigDecimal("50.00")
+        );
+
+        assertSame(account, result);
+        assertEquals(
+                new BigDecimal("150.00"),
+                result.getBalance()
+        );
+
+        verify(accountRepository).findByIdForUpdate(accountId);
+    }
 }

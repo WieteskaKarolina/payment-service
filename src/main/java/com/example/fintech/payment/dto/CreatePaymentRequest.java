@@ -10,6 +10,9 @@ import java.util.UUID;
 public record CreatePaymentRequest(
 
         @NotNull
+        UUID sourceAccountId,
+
+        @NotNull
         UUID destinationAccountId,
 
         @NotNull
