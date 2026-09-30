@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -78,6 +80,7 @@ class PaymentControllerTest {
 
         when(paymentService.createPayment(
                 eq(userId),
+                anyString(),
                 any(CreatePaymentRequest.class)
         )).thenReturn(payment);
 
@@ -85,6 +88,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -114,6 +118,7 @@ class PaymentControllerTest {
 
         verify(paymentService).createPayment(
                 eq(userId),
+                eq("test-key-123"),
                 any(CreatePaymentRequest.class)
         );
 
@@ -130,6 +135,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -160,6 +166,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -192,6 +199,7 @@ class PaymentControllerTest {
                 .when(paymentService)
                 .createPayment(
                         eq(userId),
+                        anyString(),
                         any(CreatePaymentRequest.class)
                 );
 
@@ -199,6 +207,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -216,6 +225,7 @@ class PaymentControllerTest {
 
         verify(paymentService).createPayment(
                 eq(userId),
+                eq("test-key-123"),
                 any(CreatePaymentRequest.class)
         );
 
@@ -232,6 +242,7 @@ class PaymentControllerTest {
 
         when(paymentService.createPayment(
                 eq(userId),
+                anyString(),
                 any(CreatePaymentRequest.class)
         )).thenThrow(
                 new CurrencyMismatchException(
@@ -243,6 +254,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -260,6 +272,7 @@ class PaymentControllerTest {
 
         verify(paymentService).createPayment(
                 eq(userId),
+                eq("test-key-123"),
                 any(CreatePaymentRequest.class)
         );
 
@@ -276,6 +289,7 @@ class PaymentControllerTest {
 
         when(paymentService.createPayment(
                 eq(userId),
+                anyString(),
                 any(CreatePaymentRequest.class)
         )).thenThrow(
                 new InsufficientBalanceException(
@@ -287,6 +301,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(
                         post("/api/payments")
+                                .header("Idempotency-Key", "test-key-123")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
@@ -304,6 +319,7 @@ class PaymentControllerTest {
 
         verify(paymentService).createPayment(
                 eq(userId),
+                eq("test-key-123"),
                 any(CreatePaymentRequest.class)
         );
 

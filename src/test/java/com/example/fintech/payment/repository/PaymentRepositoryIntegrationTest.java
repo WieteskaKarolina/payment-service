@@ -77,7 +77,8 @@ class PaymentRepositoryIntegrationTest {
                 destinationAccount,
                 new BigDecimal("100.00"),
                 "PLN",
-                "COMPLETED"
+                "COMPLETED",
+                "test-key"
         );
 
         Payment saved = paymentRepository.save(payment);
@@ -93,6 +94,7 @@ class PaymentRepositoryIntegrationTest {
         );
         assertEquals("PLN", found.getCurrency());
         assertEquals("COMPLETED", found.getStatus());
+        assertEquals("test-key", found.getIdempotencyKey());
         assertEquals(
                 sourceAccount.getId(),
                 found.getSourceAccount().getId()

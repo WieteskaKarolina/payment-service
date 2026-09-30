@@ -135,6 +135,7 @@ class PaymentServiceOutboxIntegrationTest {
         Payment payment =
                 paymentService.createPayment(
                         sourceUser.getId(),
+                        "test-key",
                         request
                 );
 
@@ -254,6 +255,7 @@ class PaymentServiceOutboxIntegrationTest {
                 RuntimeException.class,
                 () -> paymentService.createPayment(
                         sourceUser.getId(),
+                        "test-key",
                         request
                 )
         );
@@ -267,5 +269,89 @@ class PaymentServiceOutboxIntegrationTest {
                 0,
                 outboxEventRepository.count()
         );
+    }
+
+    @Test
+    void shouldProcessPaymentOnlyOnceForSameIdempotencyKey() {
+        User sourceUser = new User(
+                "idempotency-source@test.com",
+                "passwordHash",
+                "Source",
+                "User",
+                "USER"
+        );
+
+        User destinationUser = new User(
+                "idempotency-destination@test.com",
+                "passwordHash",
+                "Destination",
+                "User",
+                "USER"
+        );
+
+        userRepository.save(sourceUser);
+        userRepository.save(destinationUser);
+
+        Account sourceAccount = new Account(
+                sourceUser,
+                "PLN",
+                new BigDecimal("1000.00")
+        );
+
+        Account destinationAccount = new Account(
+                destinationUser,
+                "PLN",
+                new BigDecimal("500.00")
+        );
+
+        accountRepository.save(sourceAccount);
+        accountRepository.save(destinationAccount);
+
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                sourceAccount.getId(),
+                destinationAccount.getId(),
+                new BigDecimal("100.00"),
+                "PLN"
+        );
+
+        Payment firstPayment = paymentService.createPayment(
+                sourceUser.getId(),
+                "same-key",
+                request
+        );
+
+        Payment secondPayment = paymentService.createPayment(
+                sourceUser.getId(),
+                "same-key",
+                request
+        );
+
+        assertEquals(
+                firstPayment.getId(),
+                secondPayment.getId()
+        );
+
+        Account updatedSourceAccount =
+                accountRepository.findById(sourceAccount.getId())
+                        .orElseThrow();
+
+        Account updatedDestinationAccount =
+                accountRepository.findById(destinationAccount.getId())
+                        .orElseThrow();
+
+        assertEquals(
+                new BigDecimal("900.00"),
+                updatedSourceAccount.getBalance()
+                        .setScale(2)
+        );
+
+        assertEquals(
+                new BigDecimal("600.00"),
+                updatedDestinationAccount.getBalance()
+                        .setScale(2)
+        );
+
+        assertEquals(1, paymentRepository.count());
+        assertEquals(1, outboxEventRepository.count());
     }
 }

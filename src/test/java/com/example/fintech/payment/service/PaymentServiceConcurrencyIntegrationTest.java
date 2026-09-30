@@ -123,6 +123,7 @@ class PaymentServiceConcurrencyIntegrationTest {
             transactionTemplate.executeWithoutResult(
                     status -> paymentService.createPayment(
                             sourceUserId,
+                            "concurrent-transfer-1",
                             request
                     )
             );
@@ -134,6 +135,7 @@ class PaymentServiceConcurrencyIntegrationTest {
             transactionTemplate.executeWithoutResult(
                     status -> paymentService.createPayment(
                             sourceUserId,
+                            "concurrent-transfer-2",
                             request
                     )
             );

@@ -3,7 +3,6 @@ package com.example.fintech.payment.service;
 import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.service.AccountService;
 import com.example.fintech.kafka.event.PaymentCreatedEvent;
-import com.example.fintech.kafka.producer.PaymentEventProducer;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
@@ -17,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,7 +30,8 @@ public class PaymentService {
     public PaymentService(
             PaymentRepository paymentRepository,
             AccountService accountService,
-            OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper
+            OutboxEventRepository outboxEventRepository,
+            ObjectMapper objectMapper
     ) {
         this.paymentRepository = paymentRepository;
         this.accountService = accountService;
@@ -41,31 +42,52 @@ public class PaymentService {
     @Transactional
     public Payment createPayment(
             UUID userId,
+            String idempotencyKey,
             CreatePaymentRequest request
     ) {
+        // 1. Lock source account
         Account sourceAccount = getSourceAccount(userId, request);
+
+        // 2. Check idempotency
+        Optional<Payment> existingPayment =
+                paymentRepository.findBySourceAccountIdAndIdempotencyKey(
+                        sourceAccount.getId(),
+                        idempotencyKey
+                );
+
+        // 3. Same request was already processed
+        if (existingPayment.isPresent()) {
+            return existingPayment.get();
+        }
+
+        // 4. Lock destination account
         Account destinationAccount = getDestinationAccount(request);
 
+        // 5. Validate transfer
         validateTransfer(
                 sourceAccount,
                 destinationAccount,
                 request.amount()
         );
 
+        // 6. Transfer money
         transferBalance(
                 sourceAccount,
                 destinationAccount,
                 request.amount()
         );
 
+        // 7. Create payment
         Payment payment = createPaymentEntity(
                 sourceAccount,
                 destinationAccount,
-                request
+                request,
+                idempotencyKey
         );
 
         Payment savedPayment = paymentRepository.save(payment);
 
+        // 8. Create outbox event
         createOutboxEvent(savedPayment);
 
         return savedPayment;
@@ -88,7 +110,9 @@ public class PaymentService {
         return sourceAccount;
     }
 
-    private Account getDestinationAccount(CreatePaymentRequest request) {
+    private Account getDestinationAccount(
+            CreatePaymentRequest request
+    ) {
         return accountService.getByIdForUpdate(
                 request.destinationAccountId()
         );
@@ -131,14 +155,16 @@ public class PaymentService {
     private Payment createPaymentEntity(
             Account sourceAccount,
             Account destinationAccount,
-            CreatePaymentRequest request
+            CreatePaymentRequest request,
+            String idempotencyKey
     ) {
         return new Payment(
                 sourceAccount,
                 destinationAccount,
                 request.amount(),
                 request.currency(),
-                "COMPLETED"
+                "COMPLETED",
+                idempotencyKey
         );
     }
 

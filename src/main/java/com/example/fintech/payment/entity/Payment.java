@@ -36,6 +36,9 @@ public class Payment {
     @Column(nullable = false, length = 50)
     private String status;
 
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -44,13 +47,15 @@ public class Payment {
             Account destinationAccount,
             BigDecimal amount,
             String currency,
-            String status
+            String status,
+            String idempotencyKey
     ) {
         this.sourceAccount = sourceAccount;
         this.destinationAccount = destinationAccount;
         this.amount = amount;
         this.currency = currency;
         this.status = status;
+        this.idempotencyKey = idempotencyKey;
         this.createdAt = OffsetDateTime.now();
     }
 }
