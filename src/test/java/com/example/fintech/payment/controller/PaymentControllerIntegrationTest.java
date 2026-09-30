@@ -112,6 +112,7 @@ class PaymentControllerIntegrationTest {
                                         "Authorization",
                                         "Bearer " + token
                                 )
+                                .header("Idempotency-Key", "test-key-create")
                                 .contentType("application/json")
                                 .content("""
                                         {
@@ -202,6 +203,7 @@ class PaymentControllerIntegrationTest {
                                         "Bearer " + token
                                 )
                                 .contentType("application/json")
+                                .header("Idempotency-Key", "test-key-insufficient")
                                 .content("""
                                     {
                                         "sourceAccountId": "%s",
@@ -250,6 +252,7 @@ class PaymentControllerIntegrationTest {
                                         "Bearer " + token
                                 )
                                 .contentType("application/json")
+                                .header("Idempotency-Key", "test-key-missing-destination")
                                 .content("""
                                     {
                                         "sourceAccountId": "%s",
