@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Testcontainers
 class PaymentControllerIntegrationTest {
@@ -113,11 +115,13 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PLN"
                                         }
                                         """.formatted(
+                                        sourceAccount.getId(),
                                         destinationAccount.getId()
                                 ))
                 )
@@ -200,11 +204,13 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                     {
+                                        "sourceAccountId": "%s",
                                         "destinationAccountId": "%s",
                                         "amount": 100.00,
                                         "currency": "PLN"
                                     }
                                     """.formatted(
+                                        sourceAccount.getId(),
                                         destinationAccount.getId()
                                 ))
                 )
@@ -246,11 +252,15 @@ class PaymentControllerIntegrationTest {
                                 .contentType("application/json")
                                 .content("""
                                     {
+                                        "sourceAccountId": "%s",
                                         "destinationAccountId": "%s",
                                         "amount": 100.00,
                                         "currency": "PLN"
                                     }
-                                    """.formatted(nonExistingAccountId))
+                                    """.formatted(
+                                        sourceAccount.getId(),
+                                        nonExistingAccountId
+                                ))
                 )
                 .andExpect(status().isNotFound());
     }

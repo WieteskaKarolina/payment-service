@@ -1,17 +1,16 @@
 package com.example.fintech.payment.controller;
 
 import com.example.fintech.account.exception.AccountNotFoundException;
+import com.example.fintech.exception.GlobalExceptionHandler;
 import com.example.fintech.payment.dto.CreatePaymentRequest;
 import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
 import com.example.fintech.payment.service.PaymentService;
-import com.example.fintech.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,7 +24,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -90,11 +88,15 @@ class PaymentControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PLN"
                                         }
-                                        """.formatted(destinationAccountId))
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id")
@@ -121,6 +123,8 @@ class PaymentControllerTest {
     @Test
     void shouldRejectInvalidRequest() throws Exception {
         UUID userId = UUID.randomUUID();
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
 
         setAuthentication(userId);
 
@@ -129,11 +133,15 @@ class PaymentControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": -100.00,
                                             "currency": "PLN"
                                         }
-                                        """.formatted(UUID.randomUUID()))
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
                 )
                 .andExpect(status().isBadRequest());
 
@@ -145,6 +153,8 @@ class PaymentControllerTest {
     @Test
     void shouldReturnBadRequestWhenCurrencyIsInvalid() throws Exception {
         UUID userId = UUID.randomUUID();
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
 
         setAuthentication(userId);
 
@@ -153,11 +163,15 @@ class PaymentControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PL"
                                         }
-                                        """.formatted(UUID.randomUUID()))
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
                 )
                 .andExpect(status().isBadRequest());
 
@@ -171,6 +185,8 @@ class PaymentControllerTest {
             throws Exception {
 
         UUID userId = UUID.randomUUID();
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
 
         doThrow(new AccountNotFoundException("Source account not found"))
                 .when(paymentService)
@@ -182,16 +198,21 @@ class PaymentControllerTest {
         setAuthentication(userId);
 
         mockMvc.perform(
-                post("/api/payments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "destinationAccountId": "%s",
-                                    "amount": 100.00,
-                                    "currency": "PLN"
-                                }
-                                """.formatted(UUID.randomUUID()))
-        );
+                        post("/api/payments")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "sourceAccountId": "%s",
+                                            "destinationAccountId": "%s",
+                                            "amount": 100.00,
+                                            "currency": "PLN"
+                                        }
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
+                )
+                .andExpect(status().isNotFound());
 
         verify(paymentService).createPayment(
                 eq(userId),
@@ -206,6 +227,8 @@ class PaymentControllerTest {
             throws Exception {
 
         UUID userId = UUID.randomUUID();
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
 
         when(paymentService.createPayment(
                 eq(userId),
@@ -223,13 +246,22 @@ class PaymentControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PLN"
                                         }
-                                        """.formatted(UUID.randomUUID()))
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
                 )
                 .andExpect(status().isBadRequest());
+
+        verify(paymentService).createPayment(
+                eq(userId),
+                any(CreatePaymentRequest.class)
+        );
 
         clearAuthentication();
     }
@@ -239,6 +271,8 @@ class PaymentControllerTest {
             throws Exception {
 
         UUID userId = UUID.randomUUID();
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
 
         when(paymentService.createPayment(
                 eq(userId),
@@ -256,13 +290,22 @@ class PaymentControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
+                                            "sourceAccountId": "%s",
                                             "destinationAccountId": "%s",
                                             "amount": 100.00,
                                             "currency": "PLN"
                                         }
-                                        """.formatted(UUID.randomUUID()))
+                                        """.formatted(
+                                        sourceAccountId,
+                                        destinationAccountId
+                                ))
                 )
                 .andExpect(status().isBadRequest());
+
+        verify(paymentService).createPayment(
+                eq(userId),
+                any(CreatePaymentRequest.class)
+        );
 
         clearAuthentication();
     }

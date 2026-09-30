@@ -106,6 +106,7 @@ class PaymentServiceConcurrencyIntegrationTest {
         UUID destinationAccountId = destinationAccount.getId();
 
         CreatePaymentRequest request = new CreatePaymentRequest(
+                sourceAccount.getId(),
                 destinationAccountId,
                 new BigDecimal("100.00"),
                 "PLN"
