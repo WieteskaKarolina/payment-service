@@ -9,9 +9,12 @@ import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.outbox.entity.OutboxEvent;
+import com.example.fintech.payment.outbox.repository.OutboxEventRepository;
 import com.example.fintech.payment.repository.PaymentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -21,16 +24,18 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final AccountService accountService;
-    private final PaymentEventProducer paymentEventProducer;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             AccountService accountService,
-            PaymentEventProducer paymentEventProducer
+            OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper
     ) {
         this.paymentRepository = paymentRepository;
         this.accountService = accountService;
-        this.paymentEventProducer = paymentEventProducer;
+        this.outboxEventRepository = outboxEventRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -41,9 +46,17 @@ public class PaymentService {
         Account sourceAccount = getSourceAccount(userId, request);
         Account destinationAccount = getDestinationAccount(request);
 
-        validateTransfer(sourceAccount, destinationAccount, request.amount());
+        validateTransfer(
+                sourceAccount,
+                destinationAccount,
+                request.amount()
+        );
 
-        transferBalance(sourceAccount, destinationAccount, request.amount());
+        transferBalance(
+                sourceAccount,
+                destinationAccount,
+                request.amount()
+        );
 
         Payment payment = createPaymentEntity(
                 sourceAccount,
@@ -53,7 +66,7 @@ public class PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
 
-        publishPaymentCreatedEvent(savedPayment);
+        createOutboxEvent(savedPayment);
 
         return savedPayment;
     }
@@ -129,7 +142,7 @@ public class PaymentService {
         );
     }
 
-    private void publishPaymentCreatedEvent(Payment payment) {
+    private void createOutboxEvent(Payment payment) {
         PaymentCreatedEvent event = new PaymentCreatedEvent(
                 payment.getId(),
                 payment.getSourceAccount().getId(),
@@ -138,6 +151,15 @@ public class PaymentService {
                 payment.getCurrency()
         );
 
-        paymentEventProducer.publishPaymentCreated(event);
+        String payload = objectMapper.writeValueAsString(event);
+
+        OutboxEvent outboxEvent = new OutboxEvent(
+                UUID.randomUUID(),
+                "PAYMENT_CREATED",
+                payment.getId(),
+                payload
+        );
+
+        outboxEventRepository.save(outboxEvent);
     }
 }

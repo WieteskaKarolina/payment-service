@@ -4,6 +4,8 @@ import com.example.fintech.kafka.event.PaymentCreatedEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.ExecutionException;
+
 @Component
 public class PaymentEventProducer {
 
@@ -18,10 +20,23 @@ public class PaymentEventProducer {
     }
 
     public void publishPaymentCreated(PaymentCreatedEvent event) {
-        kafkaTemplate.send(
-                TOPIC,
-                event.paymentId().toString(),
-                event
-        );
+        try {
+            kafkaTemplate.send(
+                    TOPIC,
+                    event.paymentId().toString(),
+                    event
+            ).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while publishing payment event",
+                    e
+            );
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(
+                    "Failed to publish payment event",
+                    e
+            );
+        }
     }
 }
