@@ -71,6 +71,19 @@ public class PaymentService {
             );
         }
 
+        // Check for an existing key before resolving the destination. This makes
+        // changed retries conflict even when their new destination does not exist.
+        Account requestedSource = accountService.getById(request.sourceAccountId());
+        verifySourceOwnership(requestedSource, userId);
+        Optional<Payment> priorAttempt = findPriorPayment(
+                requestedSource.getId(), idempotencyKey
+        );
+        if (priorAttempt.isPresent()) {
+            return returnIfSameRequest(
+                    priorAttempt.get(), request.destinationAccountId(), request
+            );
+        }
+
         // 1. Lock both accounts in deterministic order
         LockedAccounts accounts = lockAccounts(request);
 
@@ -78,35 +91,18 @@ public class PaymentService {
         Account destinationAccount = accounts.destination();
 
         // 2. Verify that the authenticated user owns the source account
-        if (!sourceAccount.getUser().getId().equals(userId)) {
-            throw new AccountAccessDeniedException(
-                    "You do not have access to this account"
-            );
-        }
+        verifySourceOwnership(sourceAccount, userId);
 
         // 3. Check idempotency
-        Optional<Payment> existingPayment =
-                paymentRepository.findBySourceAccountIdAndIdempotencyKey(
-                        sourceAccount.getId(),
-                        idempotencyKey
-                );
+        Optional<Payment> existingPayment = findPriorPayment(
+                sourceAccount.getId(), idempotencyKey
+        );
 
         // 4. Return an exact retry; reject key reuse for different request data
         if (existingPayment.isPresent()) {
-            Payment priorPayment = existingPayment.get();
-            boolean sameRequest =
-                    priorPayment.getDestinationAccount().getId()
-                            .equals(destinationAccount.getId())
-                    && priorPayment.getAmount().compareTo(request.amount()) == 0
-                    && priorPayment.getCurrency().equals(request.currency());
-
-            if (!sameRequest) {
-                throw new IdempotencyKeyConflictException(
-                        "Idempotency-Key was already used for a different payment"
-                );
-            }
-
-            return priorPayment;
+            return returnIfSameRequest(
+                    existingPayment.get(), destinationAccount.getId(), request
+            );
         }
 
         // 5. Validate transfer
@@ -138,6 +134,37 @@ public class PaymentService {
         createOutboxEvent(savedPayment);
 
         return savedPayment;
+    }
+
+    private void verifySourceOwnership(Account sourceAccount, UUID userId) {
+        if (!sourceAccount.getUser().getId().equals(userId)) {
+            throw new AccountAccessDeniedException(
+                    "You do not have access to this account"
+            );
+        }
+    }
+
+    private Optional<Payment> findPriorPayment(UUID sourceAccountId, String idempotencyKey) {
+        return paymentRepository.findBySourceAccountIdAndIdempotencyKey(
+                sourceAccountId, idempotencyKey
+        );
+    }
+
+    private Payment returnIfSameRequest(
+            Payment priorPayment,
+            UUID destinationAccountId,
+            CreatePaymentRequest request
+    ) {
+        boolean sameRequest = priorPayment.getDestinationAccount().getId()
+                .equals(destinationAccountId)
+                && priorPayment.getAmount().compareTo(request.amount()) == 0
+                && priorPayment.getCurrency().equals(request.currency());
+        if (!sameRequest) {
+            throw new IdempotencyKeyConflictException(
+                    "Idempotency-Key was already used for a different payment"
+            );
+        }
+        return priorPayment;
     }
 
     private void validateTransfer(

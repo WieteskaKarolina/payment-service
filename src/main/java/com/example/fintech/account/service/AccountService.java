@@ -3,6 +3,7 @@ package com.example.fintech.account.service;
 import com.example.fintech.account.entity.Account;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.account.repository.AccountRepository;
+import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.user.entity.User;
 import com.example.fintech.user.service.UserService;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class AccountService {
         Account account = getByIdForUpdate(accountId);
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new com.example.fintech.payment.exception.AccountAccessDeniedException(
+            throw new AccountAccessDeniedException(
                     "You do not have access to this account"
             );
         }
