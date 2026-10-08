@@ -15,6 +15,9 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     List<Account> findAllByUserId(UUID userId);
 
+    @Query("select a.user.id from Account a where a.id = :accountId")
+    Optional<UUID> findOwnerIdByAccountId(@Param("accountId") UUID accountId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select a

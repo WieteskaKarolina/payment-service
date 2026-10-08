@@ -33,6 +33,11 @@ public class AccountService {
                         new AccountNotFoundException("Account not found"));
     }
 
+    public UUID getOwnerId(UUID accountId) {
+        return accountRepository.findOwnerIdByAccountId(accountId)
+                .orElseThrow(() -> new AccountNotFoundException("Account not found"));
+    }
+
     @Transactional
     public Account getByIdForUpdate(UUID id) {
         return accountRepository.findByIdForUpdate(id)

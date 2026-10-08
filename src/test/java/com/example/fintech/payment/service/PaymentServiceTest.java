@@ -76,7 +76,7 @@ class PaymentServiceTest {
         when(sourceAccount.getCurrency()).thenReturn("PLN");
         when(sourceAccount.getBalance())
                 .thenReturn(new BigDecimal("1000.00"));
-        when(accountService.getById(sourceAccountId)).thenReturn(sourceAccount);
+        when(accountService.getOwnerId(sourceAccountId)).thenReturn(userId);
 
         when(destinationAccount.getCurrency()).thenReturn("PLN");
         when(destinationAccount.getBalance())
@@ -140,15 +140,7 @@ class PaymentServiceTest {
                 "00000000-0000-0000-0000-000000000002"
         );
 
-        User accountOwner = mock(User.class);
-
-        Account sourceAccount = mock(Account.class);
-        Account destinationAccount = mock(Account.class);
-
-        when(sourceAccount.getUser()).thenReturn(accountOwner);
-        when(accountOwner.getId()).thenReturn(accountOwnerId);
-
-        when(accountService.getById(sourceAccountId)).thenReturn(sourceAccount);
+        when(accountService.getOwnerId(sourceAccountId)).thenReturn(accountOwnerId);
 
         CreatePaymentRequest request = new CreatePaymentRequest(
                 sourceAccountId,
@@ -162,7 +154,8 @@ class PaymentServiceTest {
                 () -> paymentService.createPayment(userId, "test-key", request)
         );
 
-        verify(accountService).getById(sourceAccountId);
+        verify(accountService).getOwnerId(sourceAccountId);
+        verify(accountService, never()).getByIdForUpdate(any(UUID.class));
 
         verifyNoInteractions(paymentRepository);
         verifyNoInteractions(outboxEventRepository);
@@ -203,7 +196,7 @@ class PaymentServiceTest {
 
         when(accountService.getByIdForUpdate(sourceAccountId))
                 .thenReturn(sourceAccount);
-        when(accountService.getById(sourceAccountId)).thenReturn(sourceAccount);
+        when(accountService.getOwnerId(sourceAccountId)).thenReturn(userId);
 
         when(accountService.getByIdForUpdate(sourceAccountId)).thenReturn(sourceAccount);
         when(accountService.getByIdForUpdate(destinationAccountId))
@@ -263,7 +256,7 @@ class PaymentServiceTest {
         when(sourceAccount.getCurrency()).thenReturn("PLN");
         when(destinationAccount.getCurrency()).thenReturn("EUR");
 
-        when(accountService.getById(sourceAccountId)).thenReturn(sourceAccount);
+        when(accountService.getOwnerId(sourceAccountId)).thenReturn(userId);
 
         when(accountService.getByIdForUpdate(sourceAccountId)).thenReturn(sourceAccount);
         when(accountService.getByIdForUpdate(destinationAccountId))
@@ -307,7 +300,7 @@ class PaymentServiceTest {
                 "00000000-0000-0000-0000-000000000002"
         );
 
-        when(accountService.getById(sourceAccountId))
+        when(accountService.getOwnerId(sourceAccountId))
                 .thenThrow(new AccountNotFoundException("Source account not found"));
 
         CreatePaymentRequest request = new CreatePaymentRequest(
@@ -322,7 +315,7 @@ class PaymentServiceTest {
                 () -> paymentService.createPayment(userId, "test-key", request)
         );
 
-        verify(accountService).getById(sourceAccountId);
+        verify(accountService).getOwnerId(sourceAccountId);
 
         verify(accountService, never())
                 .getByIdForUpdate(destinationAccountId);
@@ -389,7 +382,7 @@ class PaymentServiceTest {
                 "PLN"
         );
 
-        when(accountService.getById(sourceAccountId)).thenReturn(sourceAccount);
+        when(accountService.getOwnerId(sourceAccountId)).thenReturn(userId);
 
         when(paymentRepository.findBySourceAccountIdAndIdempotencyKey(
                 sourceAccountId,
@@ -447,7 +440,7 @@ class PaymentServiceTest {
         );
         destination.setId(destinationId);
         Payment priorPayment = getExistingPayment(source, destination);
-        when(accountService.getById(sourceId)).thenReturn(source);
+        when(accountService.getOwnerId(sourceId)).thenReturn(userId);
         when(paymentRepository.findBySourceAccountIdAndIdempotencyKey(sourceId, "same-key"))
                 .thenReturn(Optional.of(priorPayment));
         CreatePaymentRequest changedRequest = new CreatePaymentRequest(
