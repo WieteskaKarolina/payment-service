@@ -8,6 +8,8 @@ import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.IdempotencyKeyConflictException;
+import com.example.fintech.payment.exception.InvalidPaymentRequestException;
 import com.example.fintech.payment.exception.SameAccountTransferException;
 import com.example.fintech.payment.outbox.entity.OutboxEvent;
 import com.example.fintech.payment.outbox.repository.OutboxEventRepository;
@@ -50,6 +52,19 @@ public class PaymentService {
             String idempotencyKey,
             CreatePaymentRequest request
     ) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()
+                || idempotencyKey.length() > 100) {
+            throw new InvalidPaymentRequestException(
+                    "Idempotency-Key must contain 1 to 100 non-blank characters"
+            );
+        }
+
+        if (request.amount().scale() > 4) {
+            throw new InvalidPaymentRequestException(
+                    "Amount must have no more than 4 decimal places"
+            );
+        }
+
         if (request.sourceAccountId().equals(request.destinationAccountId())) {
             throw new SameAccountTransferException(
                     "Source and destination accounts must be different"
@@ -76,9 +91,22 @@ public class PaymentService {
                         idempotencyKey
                 );
 
-        // 4. Same request was already processed
+        // 4. Return an exact retry; reject key reuse for different request data
         if (existingPayment.isPresent()) {
-            return existingPayment.get();
+            Payment priorPayment = existingPayment.get();
+            boolean sameRequest =
+                    priorPayment.getDestinationAccount().getId()
+                            .equals(destinationAccount.getId())
+                    && priorPayment.getAmount().compareTo(request.amount()) == 0
+                    && priorPayment.getCurrency().equals(request.currency());
+
+            if (!sameRequest) {
+                throw new IdempotencyKeyConflictException(
+                        "Idempotency-Key was already used for a different payment"
+                );
+            }
+
+            return priorPayment;
         }
 
         // 5. Validate transfer

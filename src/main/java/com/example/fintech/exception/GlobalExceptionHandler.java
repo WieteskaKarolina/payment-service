@@ -4,6 +4,8 @@ import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.IdempotencyKeyConflictException;
+import com.example.fintech.payment.exception.InvalidPaymentRequestException;
 import com.example.fintech.payment.exception.SameAccountTransferException;
 import com.example.fintech.user.exception.UserAlreadyExistsException;
 import com.example.fintech.user.exception.UserNotFoundException;
@@ -83,6 +85,30 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(
                         HttpStatus.BAD_REQUEST.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(InvalidPaymentRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPaymentRequest(
+            InvalidPaymentRequestException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        HttpStatus.BAD_REQUEST.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(IdempotencyKeyConflictException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyKeyConflict(
+            IdempotencyKeyConflictException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        HttpStatus.CONFLICT.value(),
                         exception.getMessage()
                 ));
     }

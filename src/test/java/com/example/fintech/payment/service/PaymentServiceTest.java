@@ -9,6 +9,8 @@ import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.IdempotencyKeyConflictException;
+import com.example.fintech.payment.exception.InvalidPaymentRequestException;
 import com.example.fintech.payment.outbox.entity.OutboxEvent;
 import com.example.fintech.payment.outbox.repository.OutboxEventRepository;
 import com.example.fintech.payment.repository.PaymentRepository;
@@ -423,6 +425,59 @@ class PaymentServiceTest {
 
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void shouldRejectBlankOrTooLongIdempotencyKeyBeforeLoadingAccounts() {
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("10.00"), "PLN"
+        );
+
+        assertThrows(InvalidPaymentRequestException.class,
+                () -> paymentService.createPayment(UUID.randomUUID(), "  ", request));
+        assertThrows(InvalidPaymentRequestException.class,
+                () -> paymentService.createPayment(UUID.randomUUID(), "k".repeat(101), request));
+        verifyNoInteractions(accountService, paymentRepository, outboxEventRepository);
+    }
+
+    @Test
+    void shouldRejectAmountWithMoreThanFourDecimalPlacesBeforeLoadingAccounts() {
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("1.00001"), "PLN"
+        );
+
+        assertThrows(InvalidPaymentRequestException.class,
+                () -> paymentService.createPayment(UUID.randomUUID(), "test-key", request));
+        verifyNoInteractions(accountService, paymentRepository, outboxEventRepository);
+    }
+
+    @Test
+    void shouldRejectReusingIdempotencyKeyForDifferentPaymentDetails() {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        User sourceUser = new User("source@test.com", "hash", "Source", "User", "USER");
+        sourceUser.setId(userId);
+        Account source = new Account(sourceUser, "PLN", new BigDecimal("1000.00"));
+        source.setId(sourceId);
+        Account destination = new Account(
+                new User("destination@test.com", "hash", "Destination", "User", "USER"),
+                "PLN", new BigDecimal("100.00")
+        );
+        destination.setId(destinationId);
+        Payment priorPayment = getExistingPayment(source, destination);
+        when(accountService.getByIdForUpdate(sourceId)).thenReturn(source);
+        when(accountService.getByIdForUpdate(destinationId)).thenReturn(destination);
+        when(paymentRepository.findBySourceAccountIdAndIdempotencyKey(sourceId, "same-key"))
+                .thenReturn(Optional.of(priorPayment));
+        CreatePaymentRequest changedRequest = new CreatePaymentRequest(
+                sourceId, destinationId, new BigDecimal("101.00"), "PLN"
+        );
+
+        assertThrows(IdempotencyKeyConflictException.class,
+                () -> paymentService.createPayment(userId, "same-key", changedRequest));
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verifyNoInteractions(outboxEventRepository);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.example.fintech.payment.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -17,6 +18,7 @@ public record CreatePaymentRequest(
 
         @NotNull
         @DecimalMin(value = "0.01")
+        @Digits(integer = 15, fraction = 4)
         BigDecimal amount,
 
         @NotNull
