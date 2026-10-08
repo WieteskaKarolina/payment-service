@@ -25,10 +25,12 @@ public class PaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     public PaymentResponse createPayment(
             @AuthenticationPrincipal String userId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody CreatePaymentRequest request
     ) {
         Payment payment = paymentService.createPayment(
                 UUID.fromString(userId),
+                idempotencyKey,
                 request
         );
 

@@ -3,7 +3,11 @@ package com.example.fintech.exception;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
+import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.IdempotencyKeyConflictException;
+import com.example.fintech.payment.exception.InvalidPaymentRequestException;
+import com.example.fintech.payment.exception.SameAccountTransferException;
 import com.example.fintech.user.exception.UserAlreadyExistsException;
 import com.example.fintech.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -13,6 +17,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountAccessDenied(
+            AccountAccessDeniedException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(
+                        HttpStatus.FORBIDDEN.value(),
+                        exception.getMessage()
+                ));
+    }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(
@@ -77,6 +93,42 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InsufficientBalanceException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientBalance(
             InsufficientBalanceException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        HttpStatus.BAD_REQUEST.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(InvalidPaymentRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPaymentRequest(
+            InvalidPaymentRequestException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        HttpStatus.BAD_REQUEST.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(IdempotencyKeyConflictException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyKeyConflict(
+            IdempotencyKeyConflictException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        HttpStatus.CONFLICT.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(SameAccountTransferException.class)
+    public ResponseEntity<ErrorResponse> handleSameAccountTransfer(
+            SameAccountTransferException exception
     ) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
