@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -102,6 +103,28 @@ class PaymentRepositoryIntegrationTest {
         assertEquals(
                 destinationAccount.getId(),
                 found.getDestinationAccount().getId()
+        );
+    }
+
+    @Test
+    void shouldEnforceUniqueIdempotencyKeyPerSourceAccount() {
+        User user = userRepository.save(new User(
+                "unique-key@test.com", "hashed-password", "Test", "User", "USER"
+        ));
+        Account source = accountRepository.save(
+                new Account(user, "PLN", new BigDecimal("1000.00"))
+        );
+        Account destination = accountRepository.save(
+                new Account(user, "PLN", new BigDecimal("500.00"))
+        );
+        paymentRepository.saveAndFlush(new Payment(
+                source, destination, new BigDecimal("10.00"), "PLN", "COMPLETED", "duplicate-key"
+        ));
+
+        assertThrows(DataIntegrityViolationException.class, () ->
+                paymentRepository.saveAndFlush(new Payment(
+                        source, destination, new BigDecimal("20.00"), "PLN", "COMPLETED", "duplicate-key"
+                ))
         );
     }
 }

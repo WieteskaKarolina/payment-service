@@ -53,8 +53,14 @@ public class AccountService {
     }
 
     @Transactional
-    public Account deposit(UUID accountId, BigDecimal amount) {
+    public Account deposit(UUID userId, UUID accountId, BigDecimal amount) {
         Account account = getByIdForUpdate(accountId);
+
+        if (!account.getUser().getId().equals(userId)) {
+            throw new com.example.fintech.payment.exception.AccountAccessDeniedException(
+                    "You do not have access to this account"
+            );
+        }
 
         account.setBalance(
                 account.getBalance().add(amount)

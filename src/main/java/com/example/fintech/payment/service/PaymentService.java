@@ -59,9 +59,9 @@ public class PaymentService {
             );
         }
 
-        if (request.amount().scale() > 4) {
+        if (request.amount().signum() <= 0 || request.amount().scale() > 4) {
             throw new InvalidPaymentRequestException(
-                    "Amount must have no more than 4 decimal places"
+                    "Amount must be positive and have no more than 4 decimal places"
             );
         }
 
@@ -113,7 +113,8 @@ public class PaymentService {
         validateTransfer(
                 sourceAccount,
                 destinationAccount,
-                request.amount()
+                request.amount(),
+                request.currency()
         );
 
         // 6. Transfer money
@@ -142,7 +143,8 @@ public class PaymentService {
     private void validateTransfer(
             Account sourceAccount,
             Account destinationAccount,
-            BigDecimal amount
+            BigDecimal amount,
+            String currency
     ) {
 
         if (!sourceAccount.getCurrency()
@@ -151,6 +153,10 @@ public class PaymentService {
             throw new CurrencyMismatchException(
                     "Source and destination currencies must match"
             );
+        }
+
+        if (!sourceAccount.getCurrency().equals(currency)) {
+            throw new CurrencyMismatchException("Payment currency must match the account currency");
         }
 
         if (sourceAccount.getBalance().compareTo(amount) < 0) {

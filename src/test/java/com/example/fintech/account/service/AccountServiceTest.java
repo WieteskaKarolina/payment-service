@@ -122,9 +122,12 @@ class AccountServiceTest {
     @Test
     void shouldDepositMoneyIntoAccount() {
         UUID accountId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        User user = new User("deposit@test.com", "hash", "Test", "User", "USER");
+        user.setId(userId);
 
         Account account = new Account(
-                null,
+                user,
                 "PLN",
                 new BigDecimal("100.00")
         );
@@ -133,6 +136,7 @@ class AccountServiceTest {
                 .thenReturn(Optional.of(account));
 
         Account result = accountService.deposit(
+                userId,
                 accountId,
                 new BigDecimal("50.00")
         );
@@ -144,5 +148,18 @@ class AccountServiceTest {
         );
 
         verify(accountRepository).findByIdForUpdate(accountId);
+    }
+
+    @Test
+    void shouldRejectDepositWhenAccountBelongsToAnotherUser() {
+        UUID accountId = UUID.randomUUID();
+        User owner = new User("owner@test.com", "hash", "Owner", "User", "USER");
+        owner.setId(UUID.randomUUID());
+        Account account = new Account(owner, "PLN", new BigDecimal("100.00"));
+        when(accountRepository.findByIdForUpdate(accountId)).thenReturn(Optional.of(account));
+
+        assertThrows(com.example.fintech.payment.exception.AccountAccessDeniedException.class,
+                () -> accountService.deposit(UUID.randomUUID(), accountId, new BigDecimal("50.00")));
+        assertEquals(new BigDecimal("100.00"), account.getBalance());
     }
 }

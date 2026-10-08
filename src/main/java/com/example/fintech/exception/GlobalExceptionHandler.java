@@ -3,6 +3,7 @@ package com.example.fintech.exception;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
+import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
 import com.example.fintech.payment.exception.IdempotencyKeyConflictException;
 import com.example.fintech.payment.exception.InvalidPaymentRequestException;
@@ -16,6 +17,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountAccessDenied(
+            AccountAccessDeniedException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(
+                        HttpStatus.FORBIDDEN.value(),
+                        exception.getMessage()
+                ));
+    }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(
