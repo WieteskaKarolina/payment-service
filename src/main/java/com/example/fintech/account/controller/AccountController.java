@@ -57,10 +57,12 @@ public class AccountController {
 
     @PostMapping("/{accountId}/deposit")
     public AccountResponse deposit(
+            @AuthenticationPrincipal String userId,
             @PathVariable UUID accountId,
             @Valid @RequestBody DepositRequest request
     ) {
         Account account = accountService.deposit(
+                UUID.fromString(userId),
                 accountId,
                 request.amount()
         );
