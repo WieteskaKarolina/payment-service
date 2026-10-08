@@ -48,17 +48,29 @@ class PaymentServiceTest {
 
     @Test
     void shouldCreatePaymentAndTransferMoney() {
-        UUID userId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID userId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000001"
+        );
+
+        UUID sourceAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+
+        UUID destinationAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000002"
+        );
 
         User user = mock(User.class);
 
         Account sourceAccount = mock(Account.class);
         Account destinationAccount = mock(Account.class);
 
+        when(sourceAccount.getId()).thenReturn(sourceAccountId);
+        when(destinationAccount.getId()).thenReturn(destinationAccountId);
+
         when(sourceAccount.getUser()).thenReturn(user);
         when(user.getId()).thenReturn(userId);
+
         when(sourceAccount.getCurrency()).thenReturn("PLN");
         when(sourceAccount.getBalance())
                 .thenReturn(new BigDecimal("1000.00"));
@@ -112,20 +124,37 @@ class PaymentServiceTest {
 
     @Test
     void shouldRejectPaymentWhenSourceAccountBelongsToAnotherUser() {
-        UUID userId = UUID.randomUUID();
-        UUID accountOwnerId = UUID.randomUUID();
+        UUID userId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000001"
+        );
 
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID accountOwnerId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000002"
+        );
+
+        UUID sourceAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+
+        UUID destinationAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000002"
+        );
 
         User accountOwner = mock(User.class);
+
         Account sourceAccount = mock(Account.class);
+        Account destinationAccount = mock(Account.class);
+
+        when(sourceAccount.getId()).thenReturn(sourceAccountId);
 
         when(sourceAccount.getUser()).thenReturn(accountOwner);
         when(accountOwner.getId()).thenReturn(accountOwnerId);
 
         when(accountService.getByIdForUpdate(sourceAccountId))
                 .thenReturn(sourceAccount);
+
+        when(accountService.getByIdForUpdate(destinationAccountId))
+                .thenReturn(destinationAccount);
 
         CreatePaymentRequest request = new CreatePaymentRequest(
                 sourceAccountId,
@@ -139,7 +168,10 @@ class PaymentServiceTest {
                 () -> paymentService.createPayment(userId, "test-key", request)
         );
 
-        verify(accountService, never())
+        verify(accountService)
+                .getByIdForUpdate(sourceAccountId);
+
+        verify(accountService)
                 .getByIdForUpdate(destinationAccountId);
 
         verifyNoInteractions(paymentRepository);
@@ -148,16 +180,30 @@ class PaymentServiceTest {
 
     @Test
     void shouldRejectPaymentWhenBalanceIsInsufficient() {
-        UUID userId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID userId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000001"
+        );
+
+        UUID sourceAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+
+        UUID destinationAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000002"
+        );
 
         User user = mock(User.class);
+
         Account sourceAccount = mock(Account.class);
         Account destinationAccount = mock(Account.class);
 
-        when(sourceAccount.getUser()).thenReturn(user);
-        when(user.getId()).thenReturn(userId);
+        when(sourceAccount.getId()).thenReturn(sourceAccountId);
+
+        when(sourceAccount.getUser())
+                .thenReturn(user);
+
+        when(user.getId())
+                .thenReturn(userId);
 
         when(sourceAccount.getCurrency()).thenReturn("PLN");
         when(sourceAccount.getBalance())
@@ -197,16 +243,30 @@ class PaymentServiceTest {
 
     @Test
     void shouldRejectPaymentWhenCurrenciesDoNotMatch() {
-        UUID userId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID userId =
+                UUID.fromString("10000000-0000-0000-0000-000000000001");
 
-        User user = mock(User.class);
+        UUID sourceAccountId =
+                UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+        UUID destinationAccountId =
+                UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+        User user = new User(
+                "test@example.com",
+                "passwordHash",
+                "Test",
+                "User",
+                "USER"
+        );
+        user.setId(userId);
+
         Account sourceAccount = mock(Account.class);
         Account destinationAccount = mock(Account.class);
 
+        when(sourceAccount.getId()).thenReturn(sourceAccountId);
+
         when(sourceAccount.getUser()).thenReturn(user);
-        when(user.getId()).thenReturn(userId);
 
         when(sourceAccount.getCurrency()).thenReturn("PLN");
         when(destinationAccount.getCurrency()).thenReturn("EUR");
@@ -243,9 +303,17 @@ class PaymentServiceTest {
 
     @Test
     void shouldRejectPaymentWhenSourceAccountDoesNotExist() {
-        UUID userId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID userId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000001"
+        );
+
+        UUID sourceAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+
+        UUID destinationAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000002"
+        );
 
         when(accountService.getByIdForUpdate(sourceAccountId))
                 .thenThrow(
@@ -266,6 +334,9 @@ class PaymentServiceTest {
                 () -> paymentService.createPayment(userId, "test-key", request)
         );
 
+        verify(accountService)
+                .getByIdForUpdate(sourceAccountId);
+
         verify(accountService, never())
                 .getByIdForUpdate(destinationAccountId);
 
@@ -275,9 +346,17 @@ class PaymentServiceTest {
 
     @Test
     void shouldReturnExistingPaymentForSameIdempotencyKey() {
-        UUID userId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
+        UUID userId = UUID.fromString(
+                "10000000-0000-0000-0000-000000000001"
+        );
+
+        UUID sourceAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+
+        UUID destinationAccountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000002"
+        );
 
         User sourceUser = new User(
                 "source@test.com",
@@ -289,13 +368,6 @@ class PaymentServiceTest {
 
         sourceUser.setId(userId);
 
-        CreatePaymentRequest request = new CreatePaymentRequest(
-                sourceAccountId,
-                destinationAccountId,
-                new BigDecimal("100.00"),
-                "PLN"
-        );
-
         Account sourceAccount = new Account(
                 sourceUser,
                 "PLN",
@@ -304,10 +376,37 @@ class PaymentServiceTest {
 
         sourceAccount.setId(sourceAccountId);
 
-        Payment existingPayment = getExistingPayment(sourceAccount);
+        Account destinationAccount = new Account(
+                new User(
+                        "destination@test.com",
+                        "passwordHash",
+                        "Destination",
+                        "User",
+                        "USER"
+                ),
+                "PLN",
+                new BigDecimal("500.00")
+        );
+
+        destinationAccount.setId(destinationAccountId);
+
+        Payment existingPayment = getExistingPayment(
+                sourceAccount,
+                destinationAccount
+        );
+
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                sourceAccountId,
+                destinationAccountId,
+                new BigDecimal("100.00"),
+                "PLN"
+        );
 
         when(accountService.getByIdForUpdate(sourceAccountId))
                 .thenReturn(sourceAccount);
+
+        when(accountService.getByIdForUpdate(destinationAccountId))
+                .thenReturn(destinationAccount);
 
         when(paymentRepository.findBySourceAccountIdAndIdempotencyKey(
                 sourceAccountId,
@@ -326,21 +425,10 @@ class PaymentServiceTest {
         verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
     }
 
-    private static @NonNull Payment getExistingPayment(Account sourceAccount) {
-        User destinationUser = new User(
-                "destination@test.com",
-                "passwordHash",
-                "Destination",
-                "User",
-                "USER"
-        );
-
-        Account destinationAccount = new Account(
-                destinationUser,
-                "PLN",
-                new BigDecimal("500.00")
-        );
-
+    private static @NonNull Payment getExistingPayment(
+            Account sourceAccount,
+            Account destinationAccount
+    ) {
         return new Payment(
                 sourceAccount,
                 destinationAccount,

@@ -26,6 +26,10 @@ public class PaymentService {
     private final AccountService accountService;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private record LockedAccounts(
+            Account source,
+            Account destination
+    ) {}
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -45,23 +49,30 @@ public class PaymentService {
             String idempotencyKey,
             CreatePaymentRequest request
     ) {
-        // 1. Lock source account
-        Account sourceAccount = getSourceAccount(userId, request);
+        // 1. Lock both accounts in deterministic order
+        LockedAccounts accounts = lockAccounts(request);
 
-        // 2. Check idempotency
+        Account sourceAccount = accounts.source();
+        Account destinationAccount = accounts.destination();
+
+        // 2. Verify that the authenticated user owns the source account
+        if (!sourceAccount.getUser().getId().equals(userId)) {
+            throw new AccountAccessDeniedException(
+                    "You do not have access to this account"
+            );
+        }
+
+        // 3. Check idempotency
         Optional<Payment> existingPayment =
                 paymentRepository.findBySourceAccountIdAndIdempotencyKey(
                         sourceAccount.getId(),
                         idempotencyKey
                 );
 
-        // 3. Same request was already processed
+        // 4. Same request was already processed
         if (existingPayment.isPresent()) {
             return existingPayment.get();
         }
-
-        // 4. Lock destination account
-        Account destinationAccount = getDestinationAccount(request);
 
         // 5. Validate transfer
         validateTransfer(
@@ -91,31 +102,6 @@ public class PaymentService {
         createOutboxEvent(savedPayment);
 
         return savedPayment;
-    }
-
-    private Account getSourceAccount(
-            UUID userId,
-            CreatePaymentRequest request
-    ) {
-        Account sourceAccount = accountService.getByIdForUpdate(
-                request.sourceAccountId()
-        );
-
-        if (!sourceAccount.getUser().getId().equals(userId)) {
-            throw new AccountAccessDeniedException(
-                    "You do not have access to this account"
-            );
-        }
-
-        return sourceAccount;
-    }
-
-    private Account getDestinationAccount(
-            CreatePaymentRequest request
-    ) {
-        return accountService.getByIdForUpdate(
-                request.destinationAccountId()
-        );
     }
 
     private void validateTransfer(
@@ -187,5 +173,40 @@ public class PaymentService {
         );
 
         outboxEventRepository.save(outboxEvent);
+    }
+
+    private LockedAccounts lockAccounts(CreatePaymentRequest request) {
+
+        UUID sourceAccountId = request.sourceAccountId();
+        UUID destinationAccountId = request.destinationAccountId();
+
+        UUID firstAccountId;
+        UUID secondAccountId;
+
+        if (sourceAccountId.compareTo(destinationAccountId) < 0) {
+            firstAccountId = sourceAccountId;
+            secondAccountId = destinationAccountId;
+        } else {
+            firstAccountId = destinationAccountId;
+            secondAccountId = sourceAccountId;
+        }
+
+        Account firstAccount =
+                accountService.getByIdForUpdate(firstAccountId);
+
+        Account secondAccount =
+                accountService.getByIdForUpdate(secondAccountId);
+
+        if (firstAccount.getId().equals(sourceAccountId)) {
+            return new LockedAccounts(
+                    firstAccount,
+                    secondAccount
+            );
+        }
+
+        return new LockedAccounts(
+                secondAccount,
+                firstAccount
+        );
     }
 }
