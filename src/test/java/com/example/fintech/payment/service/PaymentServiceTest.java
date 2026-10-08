@@ -425,6 +425,30 @@ class PaymentServiceTest {
         verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
     }
 
+    @Test
+    void shouldRejectPaymentWhenSourceAndDestinationAccountsAreTheSame() {
+        UUID accountId = UUID.fromString(
+                "00000000-0000-0000-0000-000000000001"
+        );
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                accountId,
+                accountId,
+                new BigDecimal("10.00"),
+                "PLN"
+        );
+
+        assertThrows(
+                com.example.fintech.payment.exception.SameAccountTransferException.class,
+                () -> paymentService.createPayment(
+                        UUID.randomUUID(), "test-key", request
+                )
+        );
+
+        verifyNoInteractions(accountService);
+        verifyNoInteractions(paymentRepository);
+        verifyNoInteractions(outboxEventRepository);
+    }
+
     private static @NonNull Payment getExistingPayment(
             Account sourceAccount,
             Account destinationAccount

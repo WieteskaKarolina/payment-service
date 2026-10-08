@@ -4,6 +4,7 @@ import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.auth.exception.InvalidCredentialsException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.SameAccountTransferException;
 import com.example.fintech.user.exception.UserAlreadyExistsException;
 import com.example.fintech.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -77,6 +78,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InsufficientBalanceException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientBalance(
             InsufficientBalanceException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        HttpStatus.BAD_REQUEST.value(),
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(SameAccountTransferException.class)
+    public ResponseEntity<ErrorResponse> handleSameAccountTransfer(
+            SameAccountTransferException exception
     ) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)

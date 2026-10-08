@@ -8,6 +8,7 @@ import com.example.fintech.payment.entity.Payment;
 import com.example.fintech.payment.exception.AccountAccessDeniedException;
 import com.example.fintech.payment.exception.CurrencyMismatchException;
 import com.example.fintech.payment.exception.InsufficientBalanceException;
+import com.example.fintech.payment.exception.SameAccountTransferException;
 import com.example.fintech.payment.outbox.entity.OutboxEvent;
 import com.example.fintech.payment.outbox.repository.OutboxEventRepository;
 import com.example.fintech.payment.repository.PaymentRepository;
@@ -49,6 +50,12 @@ public class PaymentService {
             String idempotencyKey,
             CreatePaymentRequest request
     ) {
+        if (request.sourceAccountId().equals(request.destinationAccountId())) {
+            throw new SameAccountTransferException(
+                    "Source and destination accounts must be different"
+            );
+        }
+
         // 1. Lock both accounts in deterministic order
         LockedAccounts accounts = lockAccounts(request);
 
@@ -109,6 +116,7 @@ public class PaymentService {
             Account destinationAccount,
             BigDecimal amount
     ) {
+
         if (!sourceAccount.getCurrency()
                 .equals(destinationAccount.getCurrency())) {
 
