@@ -73,10 +73,10 @@ public class PaymentService {
 
         // Check for an existing key before resolving the destination. This makes
         // changed retries conflict even when their new destination does not exist.
-        Account requestedSource = accountService.getById(request.sourceAccountId());
-        verifySourceOwnership(requestedSource, userId);
+        UUID sourceOwnerId = accountService.getOwnerId(request.sourceAccountId());
+        verifySourceOwnership(sourceOwnerId, userId);
         Optional<Payment> priorAttempt = findPriorPayment(
-                requestedSource.getId(), idempotencyKey
+                request.sourceAccountId(), idempotencyKey
         );
         if (priorAttempt.isPresent()) {
             return returnIfSameRequest(
@@ -133,11 +133,21 @@ public class PaymentService {
         // 8. Create outbox event
         createOutboxEvent(savedPayment);
 
+        // Account-list responses include balances, so invalidate both users after commit.
+        accountService.invalidateAccountListsAfterCommit(
+                sourceAccount.getUser().getId(),
+                destinationAccount.getUser().getId()
+        );
+
         return savedPayment;
     }
 
     private void verifySourceOwnership(Account sourceAccount, UUID userId) {
-        if (!sourceAccount.getUser().getId().equals(userId)) {
+        verifySourceOwnership(sourceAccount.getUser().getId(), userId);
+    }
+
+    private void verifySourceOwnership(UUID sourceOwnerId, UUID userId) {
+        if (!sourceOwnerId.equals(userId)) {
             throw new AccountAccessDeniedException(
                     "You do not have access to this account"
             );

@@ -1,6 +1,7 @@
 package com.example.fintech.account.service;
 
 import com.example.fintech.account.entity.Account;
+import com.example.fintech.account.dto.AccountResponse;
 import com.example.fintech.account.exception.AccountNotFoundException;
 import com.example.fintech.account.repository.AccountRepository;
 import com.example.fintech.user.entity.User;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,6 +29,9 @@ class AccountServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private CacheManager cacheManager;
 
     @InjectMocks
     private AccountService accountService;
@@ -70,18 +75,24 @@ class AccountServiceTest {
     void shouldReturnAccountsForUser() {
         UUID userId = UUID.randomUUID();
 
-        List<Account> accounts = List.of(
-                new Account(null, "PLN", new BigDecimal("1000.00")),
-                new Account(null, "EUR", new BigDecimal("500.00"))
-        );
+        UUID plnId = UUID.randomUUID();
+        UUID eurId = UUID.randomUUID();
+        Account pln = new Account(null, "PLN", new BigDecimal("1000.00"));
+        pln.setId(plnId);
+        Account eur = new Account(null, "EUR", new BigDecimal("500.00"));
+        eur.setId(eurId);
+        List<Account> accounts = List.of(pln, eur);
 
         when(accountRepository.findAllByUserId(userId))
                 .thenReturn(accounts);
 
-        List<Account> result =
+        List<AccountResponse> result =
                 accountService.getAccountsForUser(userId);
 
-        assertEquals(accounts, result);
+        assertEquals(List.of(
+                new AccountResponse(plnId, "PLN", new BigDecimal("1000.00")),
+                new AccountResponse(eurId, "EUR", new BigDecimal("500.00"))
+        ), result);
 
         verify(accountRepository).findAllByUserId(userId);
     }
