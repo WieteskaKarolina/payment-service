@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.example.fintech.account.entity.Account;
+import com.example.fintech.account.dto.AccountResponse;
 import com.example.fintech.account.service.AccountService;
 import com.example.fintech.exception.GlobalExceptionHandler;
 import com.example.fintech.user.exception.UserNotFoundException;
@@ -102,18 +103,11 @@ class AccountControllerTest {
         UUID firstAccountId = UUID.randomUUID();
         UUID secondAccountId = UUID.randomUUID();
 
-        Account plnAccount = mock(Account.class);
-        when(plnAccount.getId()).thenReturn(firstAccountId);
-        when(plnAccount.getCurrency()).thenReturn("PLN");
-        when(plnAccount.getBalance()).thenReturn(new BigDecimal("1500.00"));
-
-        Account eurAccount = mock(Account.class);
-        when(eurAccount.getId()).thenReturn(secondAccountId);
-        when(eurAccount.getCurrency()).thenReturn("EUR");
-        when(eurAccount.getBalance()).thenReturn(new BigDecimal("500.00"));
-
         when(accountService.getAccountsForUser(userId))
-                .thenReturn(List.of(plnAccount, eurAccount));
+                .thenReturn(List.of(
+                        new AccountResponse(firstAccountId, "PLN", new BigDecimal("1500.00")),
+                        new AccountResponse(secondAccountId, "EUR", new BigDecimal("500.00"))
+                ));
 
         Authentication authentication =
                 new UsernamePasswordAuthenticationToken(

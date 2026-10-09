@@ -45,14 +45,7 @@ public class AccountController {
     public List<AccountResponse> getAccounts(
             @AuthenticationPrincipal String userId
     ) {
-        return accountService.getAccountsForUser(UUID.fromString(userId))
-                .stream()
-                .map(account -> new AccountResponse(
-                        account.getId(),
-                        account.getCurrency(),
-                        account.getBalance()
-                ))
-                .toList();
+        return accountService.getAccountsForUser(UUID.fromString(userId));
     }
 
     @PostMapping("/{accountId}/deposit")

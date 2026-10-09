@@ -81,6 +81,7 @@ class PaymentServiceTest {
         when(destinationAccount.getCurrency()).thenReturn("PLN");
         when(destinationAccount.getBalance())
                 .thenReturn(new BigDecimal("500.00"));
+        when(destinationAccount.getUser()).thenReturn(user);
 
         when(accountService.getByIdForUpdate(sourceAccountId)).thenReturn(sourceAccount);
         when(accountService.getByIdForUpdate(destinationAccountId)).thenReturn(destinationAccount);

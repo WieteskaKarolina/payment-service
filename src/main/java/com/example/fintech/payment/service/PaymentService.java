@@ -133,6 +133,12 @@ public class PaymentService {
         // 8. Create outbox event
         createOutboxEvent(savedPayment);
 
+        // Account-list responses include balances, so invalidate both users after commit.
+        accountService.invalidateAccountListsAfterCommit(
+                sourceAccount.getUser().getId(),
+                destinationAccount.getUser().getId()
+        );
+
         return savedPayment;
     }
 
