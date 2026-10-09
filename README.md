@@ -10,9 +10,9 @@ The project focuses on building a production-style Java backend with authenticat
 * Spring Boot
 * Spring Security + JWT
 * Spring Data JPA / Hibernate
-* PostgreSQL
-* Flyway
+* PostgreSQL + Flyway
 * Apache Kafka
+* Redis
 * Docker
 * Testcontainers
 * Maven
@@ -24,11 +24,13 @@ The project focuses on building a production-style Java backend with authenticat
 * User accounts and balances
 * Payments between accounts
 * Transactional payment processing
+* Idempotency keys to prevent duplicate payments
 * Pessimistic locking for concurrent payments
-* REST API
+* REST API with centralized exception handling
 * Database migrations with Flyway
 * Integration tests with PostgreSQL and Testcontainers
 * Asynchronous payment events with Kafka
+* Redis caching for frequently accessed account data
 
 ## Architecture
 
